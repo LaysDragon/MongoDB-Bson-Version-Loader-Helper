@@ -71,6 +71,8 @@ type Loader func([]byte, HasVersion) error
 
 type SrcLoaders map[Version]Loader
 
+//type SrcLoaders map[Version]interface{}
+
 type LoaderRegistry struct {
 	loaders      SrcLoaders
 	transformers SrcToTargetTransformers
@@ -92,14 +94,20 @@ func (l *LoaderRegistry) add(src Version, target Version, loader Transformer) {
 	l.versions[src] = append(targetVersions, target)
 }
 
-type SLoaders map[string]Loader
+//type SLoaders map[string]Loader
+type SLoaders map[string]interface{}
 type STransformers map[string]STargetTransformers
 type STargetTransformers map[string]Transformer
 
 func (l SLoaders) SrcLoaders() SrcLoaders {
 	s := SrcLoaders{}
 	for v, l := range l {
-		s[NewVersionPanic(v)] = l
+		if loader, ok := l.(Loader); ok {
+			s[NewVersionPanic(v)] = loader
+		} else {
+			s[NewVersionPanic(v)] = DefaultLoader(l)
+		}
+
 	}
 	return s
 }
@@ -212,4 +220,16 @@ func (l *LoaderRegistry) Load(src []byte, target Version) (HasVersion, error) {
 		return nil, err
 	}
 	return processingTarget, nil
+}
+
+func DefaultLoader(typeVal interface{}) Loader {
+	typ := reflect.TypeOf(typeVal)
+	return func(src []byte, dst HasVersion) error {
+		dst.SetData(reflect.New(typ).Elem().Interface())
+
+		if err := bson.Unmarshal(src, dst); err != nil {
+			return err
+		}
+		return nil
+	}
 }
