@@ -16,7 +16,7 @@ var NoVersionTagError = xerrors.New("data not version field or with invalid 0.0 
 
 type D interface{}
 type VersionCapture struct {
-	Version Version
+	Version Version `bson:"_version"`
 	D
 }
 type AVersionCapture VersionCapture
@@ -127,7 +127,7 @@ var VersionWrapperStructs = map[reflect.Type]dynamicstruct.DynamicStruct{}
 
 func AddVersionWrapperType(typeVal interface{}) dynamicstruct.DynamicStruct {
 	wrapper := dynamicstruct.NewStruct().
-		AddField("Version", Version{}, "").
+		AddField("Version", Version{}, `bson:"_version"`).
 		AddField("Data", typeVal, `bson:",inline"`).
 		Build()
 	VersionWrapperStructs[reflect.TypeOf(typeVal)] = wrapper
