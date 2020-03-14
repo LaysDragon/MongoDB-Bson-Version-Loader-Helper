@@ -66,6 +66,7 @@ func NewVersion(value string) (Version, error) {
 	return Version{_v.MINOR(), _v.PATCH()}, nil
 }
 
+//NewVersionPanic use with no error but panic directly
 func NewVersionPanic(value string) Version {
 	_v := _version(value)
 	if err := _v.Verify(); err != nil {
@@ -101,6 +102,7 @@ func (v Version) NextPATCH() Version {
 	return Version{v.MINOR, v.PATCH + 1}
 }
 
+//Less operator to compare to another Version,return true if it is less then another one
 func (v Version) Less(anotherVersion Version) bool {
 	if v.MINOR < anotherVersion.MINOR {
 		return true
@@ -110,6 +112,7 @@ func (v Version) Less(anotherVersion Version) bool {
 	return false
 }
 
+//Greater operator to compare to another Version,return true if it is greater then another one
 func (v Version) Greater(anotherVersion Version) bool {
 	if v.MINOR > anotherVersion.MINOR {
 		return true
@@ -119,8 +122,10 @@ func (v Version) Greater(anotherVersion Version) bool {
 	return false
 }
 
+//Versions array of Version
 type Versions []Version
 
+//Max get the Max Version out of array
 func (vs *Versions) Max() *Version {
 	var max Version
 	if cap(*vs) == 0 {
@@ -134,7 +139,8 @@ func (vs *Versions) Max() *Version {
 	return &max
 }
 
-type HasVersion interface {
+//VersionWrapper wrapper that contain data and version
+type VersionWrapper interface {
 	GetVersion() Version
 	SetVersion(Version)
 	GetData() interface{}

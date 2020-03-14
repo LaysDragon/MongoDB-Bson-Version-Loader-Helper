@@ -24,7 +24,7 @@ func TestUser(t *testing.T) {
 		Gender:  "dog",
 	}
 	//模擬帶版本的bson {version:"0.1",home:"...",address:"...",...}，從mongodb讀出來的
-	if userOldBson, err := bson.Marshal(loader.VersionCapture{Version: loader.NewVersionPanic("0.1"), D: userOld}); err != nil {
+	if userOldBson, err := bson.Marshal(loader.VersionCapture{Version: loader.NewVersionPanic("0.1"), Data: userOld}); err != nil {
 		t.Logf("%+v", err)
 		return
 	} else {

@@ -7,20 +7,28 @@ import (
 	"reflect"
 )
 
+//LoaderNotFoundError while can't found loader for the specified version
 var LoaderNotFoundError = xerrors.New("cannot found loader handlers for src version")
+
+//TransformerNotFoundError while can't found Transformer for specified version path transformation progress
 var TransformerNotFoundError = xerrors.New("cannot found next transformer to the target version")
+
+//TransformerSrcTypeIncorrectError while Transformer trying to cast interface{} src data into desired version struct and failed
 var TransformerSrcTypeIncorrectError = xerrors.New("src type for transformer is incorrect and failed to cast")
-var NoVersionTagError = xerrors.New("data not version field or with invalid 0.0 version")
 
-//var NoVersionWrapperError = xerrors.New("can't find version wrapper for specified type,this shouldn't happen,check how you init LoaderRegistry with NewLoaderRegistry")
+//NoVersionTagError while loaded data not contain any valid _version tag
+var NoVersionTagError = xerrors.New("data has no _version field or with invalid 0.0 version")
 
-type D interface{}
+//VersionCapture a Capture for extract the version info from byte data and carry the corresponding version structure data though the progress
 type VersionCapture struct {
 	Version Version `bson:"_version"`
-	D
+	Data    interface{}
 }
+
+//AVersionCapture use for prevent MarshalBSON loop
 type AVersionCapture VersionCapture
 
+//MarshalBSON where VersionCapture deal with version and inline Data
 func (v VersionCapture) MarshalBSON() ([]byte, error) {
 	if v.GetData() != nil {
 		versionWrapper := GetVersionWrapperStruct(v.GetData()).New()
@@ -32,6 +40,7 @@ func (v VersionCapture) MarshalBSON() ([]byte, error) {
 	return bson.Marshal(AVersionCapture(v))
 }
 
+//UnmarshalBSON  where VersionCapture deal with version and inline Data
 func (v *VersionCapture) UnmarshalBSON(src []byte) error {
 	if v.GetData() != nil {
 		versionWrapper := GetVersionWrapperStruct(v.GetData()).New()
@@ -44,42 +53,46 @@ func (v *VersionCapture) UnmarshalBSON(src []byte) error {
 	return bson.Unmarshal(src, (*AVersionCapture)(v))
 }
 
+//SetVersion set Version
 func (v *VersionCapture) SetVersion(vv Version) {
 	v.Version = vv
 }
 
-func (v VersionCapture) GetData() interface{} {
-	return v.D
-}
-
-func (v *VersionCapture) SetData(d interface{}) {
-	v.D = d
-}
-
+//GetVersion get Version
 func (v VersionCapture) GetVersion() Version {
 	return v.Version
 }
 
-type Transformer func(HasVersion) error
+//SetData set Data
+func (v *VersionCapture) SetData(d interface{}) {
+	v.Data = d
+}
+
+//GetData get Data
+func (v VersionCapture) GetData() interface{} {
+	return v.Data
+}
+
+//Transformer func that responsible for transform the data between Versions
+type Transformer func(VersionWrapper) error
 
 type TargetTransformers map[Version]Transformer
 type SrcToTargetTransformers map[Version]TargetTransformers
 
 type SrcToTargetVersions map[Version]Versions
 
-type Loader func([]byte, HasVersion) error
+//Loader func that responsible for load data for specified Version
+type Loader func([]byte, VersionWrapper) error
 
 type SrcLoaders map[Version]Loader
 
-//type SrcLoaders map[Version]interface{}
-
-type LoaderRegistry struct {
+type Registry struct {
 	loaders      SrcLoaders
 	transformers SrcToTargetTransformers
 	versions     SrcToTargetVersions
 }
 
-func (l *LoaderRegistry) add(src Version, target Version, loader Transformer) {
+func (l *Registry) add(src Version, target Version, loader Transformer) {
 	targetLoaders, ok := l.transformers[src]
 	if !ok {
 		targetLoaders = TargetTransformers{}
@@ -123,19 +136,19 @@ func (t STransformers) SrcToTargetTransformers() SrcToTargetTransformers {
 	return s
 }
 
-var VersionWrapperStructs = map[reflect.Type]dynamicstruct.DynamicStruct{}
+var DynamicVersionWrapperStructs = map[reflect.Type]dynamicstruct.DynamicStruct{}
 
 func AddVersionWrapperType(typeVal interface{}) dynamicstruct.DynamicStruct {
 	wrapper := dynamicstruct.NewStruct().
 		AddField("Version", Version{}, `bson:"_version"`).
 		AddField("Data", typeVal, `bson:",inline"`).
 		Build()
-	VersionWrapperStructs[reflect.TypeOf(typeVal)] = wrapper
+	DynamicVersionWrapperStructs[reflect.TypeOf(typeVal)] = wrapper
 	return wrapper
 }
 
 func GetVersionWrapperStruct(typeVal interface{}) dynamicstruct.DynamicStruct {
-	if wrapper, ok := VersionWrapperStructs[reflect.TypeOf(typeVal)]; ok {
+	if wrapper, ok := DynamicVersionWrapperStructs[reflect.TypeOf(typeVal)]; ok {
 		return wrapper
 	} else {
 		return AddVersionWrapperType(typeVal)
@@ -143,8 +156,9 @@ func GetVersionWrapperStruct(typeVal interface{}) dynamicstruct.DynamicStruct {
 
 }
 
-func NewLoaderRegistry(loadersL SLoaders, transformersT STransformers) *LoaderRegistry {
-	l := &LoaderRegistry{
+//NewRegistry Registry the Loaders and Transformers for migration
+func NewRegistry(loadersL SLoaders, transformersT STransformers) *Registry {
+	l := &Registry{
 		SrcLoaders{},
 		SrcToTargetTransformers{},
 		SrcToTargetVersions{},
@@ -165,7 +179,8 @@ func NewLoaderRegistry(loadersL SLoaders, transformersT STransformers) *LoaderRe
 	return l
 }
 
-func (l *LoaderRegistry) Transform(data HasVersion, target Version) error {
+//Transform transformation the src Data Struct to target Version
+func (l *Registry) Transform(data VersionWrapper, target Version) error {
 
 	if data.GetVersion().Greater(target) {
 		return xerrors.Errorf("Raise error from trying donwngrading version %s to %s for %STransformers,please update your target struct version to lastest:%w", data.GetVersion(), target, data, TransformerNotFoundError)
@@ -195,7 +210,8 @@ func (l *LoaderRegistry) Transform(data HasVersion, target Version) error {
 
 }
 
-func (l *LoaderRegistry) Load(src []byte, target Version) (HasVersion, error) {
+//Load load the bson src bytes into target Version,it will return a Version Container with data
+func (l *Registry) Load(src []byte, target Version) (VersionWrapper, error) {
 	versionCapture := VersionCapture{}
 	if err := bson.Unmarshal(src, &versionCapture); err != nil {
 		return nil, err
@@ -203,7 +219,7 @@ func (l *LoaderRegistry) Load(src []byte, target Version) (HasVersion, error) {
 	if (VersionCapture{}) == versionCapture {
 		return nil, xerrors.Errorf("Raise error %w", NoVersionTagError)
 	}
-	var processingTarget HasVersion
+	var processingTarget VersionWrapper
 	for version, loader := range l.loaders {
 		if version == versionCapture.Version {
 			processingTarget = &VersionCapture{}
@@ -224,7 +240,7 @@ func (l *LoaderRegistry) Load(src []byte, target Version) (HasVersion, error) {
 
 func DefaultLoader(typeVal interface{}) Loader {
 	typ := reflect.TypeOf(typeVal)
-	return func(src []byte, dst HasVersion) error {
+	return func(src []byte, dst VersionWrapper) error {
 		dst.SetData(reflect.New(typ).Elem().Interface())
 
 		if err := bson.Unmarshal(src, dst); err != nil {

@@ -15,7 +15,7 @@ type User struct {
 
 var UserCurrentVersion = loader.NewVersionPanic("0.2")
 
-func User_0_1_to_0_2_Transformer(container loader.HasVersion) error {
+func User_0_1_to_0_2_Transformer(container loader.VersionWrapper) error {
 	if user_0_1, ok := container.GetData().(User_0_1); ok {
 		user_0_2 := User_0_2{
 			Home:     user_0_1.Home,
@@ -27,11 +27,11 @@ func User_0_1_to_0_2_Transformer(container loader.HasVersion) error {
 		container.SetVersion(loader.NewVersionPanic("0.2"))
 		return nil
 	}
-	return xerrors.Errorf("Cannot cast %T to %s:%w", container, "User_0_1", loader.TransformerSrcTypeIncorrectError)
+	return xerrors.Errorf("Cannot cast %T to %T:%w", container, User_0_1{}, loader.TransformerSrcTypeIncorrectError)
 
 }
 
-func User_0_2_Loader(src []byte, dst loader.HasVersion) error {
+func User_0_2_Loader(src []byte, dst loader.VersionWrapper) error {
 	dst.SetData(User_0_2{})
 
 	if err := bson.Unmarshal(src, dst); err != nil {
@@ -49,7 +49,7 @@ type User_0_1 struct {
 
 type User_0_2 User
 
-var UserLoadersRegistry = loader.NewLoaderRegistry(
+var UserLoadersRegistry = loader.NewRegistry(
 	loader.SLoaders{
 		"0.1": loader.DefaultLoader(User_0_1{}),
 		"0.2": User_0_2_Loader,
@@ -63,7 +63,7 @@ var UserLoadersRegistry = loader.NewLoaderRegistry(
 
 func (s User) MarshalBSON() ([]byte, error) {
 
-	return bson.Marshal(loader.VersionCapture{Version: UserCurrentVersion, D: s})
+	return bson.Marshal(loader.VersionCapture{Version: UserCurrentVersion, Data: s})
 }
 
 func (s *User) UnmarshalBSON(src []byte) error {

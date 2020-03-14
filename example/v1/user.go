@@ -16,7 +16,7 @@ var UserCurrentVersion = loader.NewVersionPanic("0.1")
 type UserCurrent = User_0_1
 type User_0_1 User
 
-var UserLoadersRegistry = loader.NewLoaderRegistry(
+var UserLoadersRegistry = loader.NewRegistry(
 	loader.SLoaders{
 		"0.1": User_0_1{},
 	},
@@ -27,7 +27,7 @@ var UserLoadersRegistry = loader.NewLoaderRegistry(
 
 func (s User) MarshalBSON() ([]byte, error) {
 
-	return bson.Marshal(loader.VersionCapture{Version: UserCurrentVersion, D: s})
+	return bson.Marshal(loader.VersionCapture{Version: UserCurrentVersion, Data: s})
 }
 
 func (s *User) UnmarshalBSON(src []byte) error {
