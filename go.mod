@@ -1,4 +1,4 @@
-module github.com/LaysDragon/MongodbVersionLoaderHelper
+module github.com/LaysDragon/go-bson-migrator
 
 go 1.14
 

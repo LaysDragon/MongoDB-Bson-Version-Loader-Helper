@@ -1,7 +1,7 @@
 package v1
 
 import (
-	loader "github.com/LaysDragon/MongodbVersionLoaderHelper"
+	loader "github.com/LaysDragon/go-bson-migrator"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
