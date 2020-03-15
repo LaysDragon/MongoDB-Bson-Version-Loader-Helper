@@ -44,7 +44,9 @@ func (v VersionCapture) MarshalBSON() ([]byte, error) {
 func (v *VersionCapture) UnmarshalBSON(src []byte) error {
 	if v.GetData() != nil {
 		versionWrapper := GetVersionWrapperStruct(v.GetData()).New()
-		bson.Unmarshal(src, versionWrapper)
+		if err := bson.Unmarshal(src, versionWrapper); err != nil {
+			return err
+		}
 
 		reader := dynamicstruct.NewReader(versionWrapper)
 		v.SetVersion(reader.GetField("Version").Interface().(Version))
