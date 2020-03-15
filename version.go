@@ -3,17 +3,17 @@ package loader
 import (
 	// "fmt"
 	"fmt"
+	"github.com/go-errors/errors"
 	"strconv"
 	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
 	"go.mongodb.org/mongo-driver/x/bsonx"
-	"golang.org/x/xerrors"
 	"regexp"
 )
 
-var InvalidVersionValue = xerrors.New("Invalid version value")
+var InvalidVersionValue = errors.New("Invalid version value")
 
 type _version string
 
@@ -22,7 +22,7 @@ func (v _version) MINOR() int {
 		panic(err)
 	}
 	if val, err := strconv.Atoi(strings.Split(string(v), ".")[0]); err != nil {
-		panic(xerrors.Errorf("Extract Minor raise error %s:%w", v, err))
+		panic(errors.Errorf("Extract Minor raise error %s:%w", v, err))
 	} else {
 		return val
 	}
@@ -33,7 +33,7 @@ func (v _version) PATCH() int {
 		panic(err)
 	}
 	if val, err := strconv.Atoi(strings.Split(string(v), ".")[1]); err != nil {
-		panic(xerrors.Errorf("Extract PATCH raise error %s:%w", v, err))
+		panic(errors.Errorf("Extract PATCH raise error %s:%w", v, err))
 	} else {
 		return val
 	}
@@ -43,7 +43,7 @@ var versionReg, _ = regexp.Compile("^[0-9]+\\.[0-9]+$")
 
 func (v _version) Verify() error {
 	if !versionReg.Match([]byte(v)) {
-		return xerrors.Errorf("Raise error of value \"%s\":%w", v, InvalidVersionValue)
+		return errors.Errorf("Raise error of value \"%s\":%w", v, InvalidVersionValue)
 	}
 	return nil
 

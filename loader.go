@@ -1,23 +1,23 @@
 package loader
 
 import (
+	"github.com/go-errors/errors"
 	"github.com/ompluscator/dynamic-struct"
 	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/xerrors"
 	"reflect"
 )
 
 //LoaderNotFoundError while can't found loader for the specified version
-var LoaderNotFoundError = xerrors.New("cannot found loader handlers for src version")
+var LoaderNotFoundError = errors.New("cannot found loader handlers for src version")
 
 //TransformerNotFoundError while can't found Transformer for specified version path transformation progress
-var TransformerNotFoundError = xerrors.New("cannot found next transformer to the target version")
+var TransformerNotFoundError = errors.New("cannot found next transformer to the target version")
 
 //TransformerSrcTypeIncorrectError while Transformer trying to cast interface{} src data into desired version struct and failed
-var TransformerSrcTypeIncorrectError = xerrors.New("src type for transformer is incorrect and failed to cast")
+var TransformerSrcTypeIncorrectError = errors.New("src type for transformer is incorrect and failed to cast")
 
 //NoVersionTagError while loaded data not contain any valid _version tag
-var NoVersionTagError = xerrors.New("data has no _version field or with invalid 0.0 version")
+var NoVersionTagError = errors.New("data has no _version field or with invalid 0.0 version")
 
 //VersionCapture a Capture for extract the version info from byte data and carry the corresponding version structure data though the progress
 type VersionCapture struct {
@@ -185,17 +185,17 @@ func NewRegistry(loadersL SLoaders, transformersT STransformers) *Registry {
 func (l *Registry) Transform(data VersionWrapper, target Version) error {
 
 	if data.GetVersion().Greater(target) {
-		return xerrors.Errorf("Raise error from trying donwngrading version %s to %s for %STransformers,please update your target struct version to lastest:%w", data.GetVersion(), target, data, TransformerNotFoundError)
+		return errors.Errorf("Raise error from trying donwngrading version %s to %s for %STransformers,please update your target struct version to lastest:%w", data.GetVersion(), target, data, TransformerNotFoundError)
 	}
 	for data.GetVersion() != target {
 
 		targetVersions, ok := l.versions[data.GetVersion()]
 		if !ok {
-			return xerrors.Errorf("Raise error from version %s to %s for %STransformers:%w", data.GetVersion(), target, data, TransformerNotFoundError)
+			return errors.Errorf("Raise error from version %s to %s for %STransformers:%w", data.GetVersion(), target, data, TransformerNotFoundError)
 		}
 		targetTransformers, ok := l.transformers[data.GetVersion()]
 		if !ok {
-			return xerrors.Errorf("Raise error from version %s to %s for %STransformers:%w", data.GetVersion(), target, data, TransformerNotFoundError)
+			return errors.Errorf("Raise error from version %s to %s for %STransformers:%w", data.GetVersion(), target, data, TransformerNotFoundError)
 		}
 
 		var nextVersion Version
@@ -219,20 +219,20 @@ func (l *Registry) Load(src []byte, target Version) (VersionWrapper, error) {
 		return nil, err
 	}
 	if (VersionCapture{}) == versionCapture {
-		return nil, xerrors.Errorf("Raise error %w", NoVersionTagError)
+		return nil, errors.Errorf("Raise error %w", NoVersionTagError)
 	}
 	var processingTarget VersionWrapper
 	for version, loader := range l.loaders {
 		if version == versionCapture.Version {
 			processingTarget = &VersionCapture{}
 			if err := loader(src, processingTarget); err != nil {
-				return nil, xerrors.Errorf("Raise error while trying to load data:%w", err)
+				return nil, errors.Errorf("Raise error while trying to load data:%w", err)
 			}
 			break
 		}
 	}
 	if processingTarget == nil {
-		return nil, xerrors.Errorf("Raise error from src version %s:%w", versionCapture.Version, LoaderNotFoundError)
+		return nil, errors.Errorf("Raise error from src version %s:%w", versionCapture.Version, LoaderNotFoundError)
 	}
 	if err := l.Transform(processingTarget, target); err != nil {
 		return nil, err
