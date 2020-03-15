@@ -1,7 +1,8 @@
 package loader
 
 import (
-	"github.com/go-errors/errors"
+	"errors"
+	serrors "github.com/go-errors/errors"
 	"github.com/ompluscator/dynamic-struct"
 	"go.mongodb.org/mongo-driver/bson"
 	"reflect"
@@ -185,17 +186,17 @@ func NewRegistry(loadersL SLoaders, transformersT STransformers) *Registry {
 func (l *Registry) Transform(data VersionWrapper, target Version) error {
 
 	if data.GetVersion().Greater(target) {
-		return errors.Errorf("Raise error from trying donwngrading version %s to %s for %STransformers,please update your target struct version to lastest:%w", data.GetVersion(), target, data, TransformerNotFoundError)
+		return serrors.Errorf("Raise error from trying donwngrading version %s to %s for %STransformers,please update your target struct version to lastest:%w", data.GetVersion(), target, data, TransformerNotFoundError)
 	}
 	for data.GetVersion() != target {
 
 		targetVersions, ok := l.versions[data.GetVersion()]
 		if !ok {
-			return errors.Errorf("Raise error from version %s to %s for %STransformers:%w", data.GetVersion(), target, data, TransformerNotFoundError)
+			return serrors.Errorf("Raise error from version %s to %s for %STransformers:%w", data.GetVersion(), target, data, TransformerNotFoundError)
 		}
 		targetTransformers, ok := l.transformers[data.GetVersion()]
 		if !ok {
-			return errors.Errorf("Raise error from version %s to %s for %STransformers:%w", data.GetVersion(), target, data, TransformerNotFoundError)
+			return serrors.Errorf("Raise error from version %s to %s for %STransformers:%w", data.GetVersion(), target, data, TransformerNotFoundError)
 		}
 
 		var nextVersion Version
@@ -219,20 +220,20 @@ func (l *Registry) Load(src []byte, target Version) (VersionWrapper, error) {
 		return nil, err
 	}
 	if (VersionCapture{}) == versionCapture {
-		return nil, errors.Errorf("Raise error %w", NoVersionTagError)
+		return nil, serrors.Errorf("Raise error %w", NoVersionTagError)
 	}
 	var processingTarget VersionWrapper
 	for version, loader := range l.loaders {
 		if version == versionCapture.Version {
 			processingTarget = &VersionCapture{}
 			if err := loader(src, processingTarget); err != nil {
-				return nil, errors.Errorf("Raise error while trying to load data:%w", err)
+				return nil, serrors.Errorf("Raise error while trying to load data:%w", err)
 			}
 			break
 		}
 	}
 	if processingTarget == nil {
-		return nil, errors.Errorf("Raise error from src version %s:%w", versionCapture.Version, LoaderNotFoundError)
+		return nil, serrors.Errorf("Raise error from src version %s:%w", versionCapture.Version, LoaderNotFoundError)
 	}
 	if err := l.Transform(processingTarget, target); err != nil {
 		return nil, err

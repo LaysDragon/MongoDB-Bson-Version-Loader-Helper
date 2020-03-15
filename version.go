@@ -2,8 +2,9 @@ package loader
 
 import (
 	// "fmt"
+	"errors"
 	"fmt"
-	"github.com/go-errors/errors"
+	serrors "github.com/go-errors/errors"
 	"strconv"
 	"strings"
 
@@ -22,7 +23,7 @@ func (v _version) MINOR() int {
 		panic(err)
 	}
 	if val, err := strconv.Atoi(strings.Split(string(v), ".")[0]); err != nil {
-		panic(errors.Errorf("Extract Minor raise error %s:%w", v, err))
+		panic(serrors.Errorf("Extract Minor raise error %s:%w", v, err))
 	} else {
 		return val
 	}
@@ -33,7 +34,7 @@ func (v _version) PATCH() int {
 		panic(err)
 	}
 	if val, err := strconv.Atoi(strings.Split(string(v), ".")[1]); err != nil {
-		panic(errors.Errorf("Extract PATCH raise error %s:%w", v, err))
+		panic(serrors.Errorf("Extract PATCH raise error %s:%w", v, err))
 	} else {
 		return val
 	}
@@ -43,7 +44,7 @@ var versionReg, _ = regexp.Compile("^[0-9]+\\.[0-9]+$")
 
 func (v _version) Verify() error {
 	if !versionReg.Match([]byte(v)) {
-		return errors.Errorf("Raise error of value \"%s\":%w", v, InvalidVersionValue)
+		return serrors.Errorf("Raise error of value \"%s\":%w", v, InvalidVersionValue)
 	}
 	return nil
 
